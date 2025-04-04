@@ -48,3 +48,11 @@ You can set configuration in the config file specified in the `CSPY_CONFIG` env 
 
 If a docker socket path is not set, containerspy will try to connect to
 `/var/run/docker.sock` or `//./pipe/docker_engine` depending on host OS.
+
+## Supported metrics
+
+This is intended to be a dropin replacement for cAdvisor, which lists its supported metrics
+[here](https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md).
+
+The list of ContainerSpy's currently supported items from this list is:
+ - `container_cpu_usage_seconds_total`

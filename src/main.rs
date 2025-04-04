@@ -5,13 +5,14 @@ use bollard::Docker;
 use config::CONFIG;
 use opentelemetry::{metrics::MeterProvider, KeyValue};
 use opentelemetry_otlp::{MetricExporter, Protocol, WithExportConfig};
-use opentelemetry_sdk::{metrics::SdkMeterProvider, Resource};
+use opentelemetry_sdk::{metrics::SdkMeterProvider, resource::{ResourceDetector, SdkProvidedResourceDetector}, Resource};
+use tokio_util::sync::CancellationToken;
 
 mod config;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
-	/* // open a docker connection
+	// open a docker connection
 	let docker =
 		if let Some(path) = &CONFIG.docker_socket {
 			Docker::connect_with_socket(path, 60, bollard::API_DEFAULT_VERSION)?
@@ -22,7 +23,7 @@ async fn main() -> Result<()> {
 
 	let info = docker.info().await?;
 
-	println!("Connected to Docker Daemon version {:?}", info.server_version); */
+	println!("Connected to Docker Daemon version {:?}", info.server_version);
 
 	// connect the OTLP exporter
 	let metric_exporter =
@@ -53,21 +54,30 @@ async fn main() -> Result<()> {
 			},
 		};
 
-	//let test_resource = Resource::builder().with_service_name("containerspy").build();
-
 	let meter_provider = SdkMeterProvider::builder()
-	//.with_resource(test_resource)
-		//.with_periodic_exporter(opentelemetry_stdout::MetricExporter::default())
 		.with_periodic_exporter(metric_exporter)
 		.build();
 
-	let m = meter_provider
-		.meter("test_meter")
-		.u64_gauge("testing_gauge")
-		.build();
+	// fetch-report loop with graceful shutdown
+	let shutdown_token = CancellationToken::new();
+	let st2 = shutdown_token.clone(); // to be moved into the task
 
-	m.record(10, &[KeyValue::new("label", 4)]);
+	tokio::spawn(async move {
+		tokio::signal::ctrl_c().await.expect("Failed to setup ctrl-c handler");
+		st2.cancel();
+	});
 
+	let mut interval = tokio::time::interval(Duration::from_secs(1));
+
+	loop {
+		tokio::select! {
+			_ = interval.tick() => {}
+			_ = shutdown_token.cancelled() => { break }
+		}
+
+		let list_res = docker.list_containers::<String>(None).await?;
+		println!("{list_res:?}");
+	}
 
 	Ok(())
 }
