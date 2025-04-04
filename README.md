@@ -9,7 +9,7 @@ or a cloud observability platform.
 Note that containerspy currently targets only Docker, not Kubernetes or any other orchestration systems.
 It outputs the same traces as cAdvisor for drop-in compatibility with existing data series and dashboards.
 
-## Why make this?
+## Why make/use this?
 
 ContainerSpy is intended to replace [cAdvisor](https://github.com/google/cadvisor) in a Prometheus/Grafana monitoring
 setup. It takes inspiration from [Beszel](https://www.beszel.dev/) in its approach.
@@ -35,3 +35,16 @@ My motivation to move to a Prometheus/Grafana setup is that I want the centralis
 ## How to set up
 
 TODO: will write once it actually works
+
+## How to configure
+
+| `config.json`   | env var              | description                                                       | default    |
+| --------------- | -------------------- | ----------------------------------------------------------------- | ---------- |
+| `docker_socket` | `CSPY_DOCKER_SOCKET` | The docker socket / named pipe to connect to                      | unset      |
+| `otlp_protocol` | `CSPY_OTLP_PROTO`    | Whether to use httpbinary, httpjson, or grpc to send OTLP metrics | httpbinary |
+
+You can set configuration in the config file specified in the `CSPY_CONFIG` env variable
+(`/etc/containerspy/config.json`) by default, which supports JSON5 syntax, or configure via the `CSPY_` env vars.
+
+If a docker socket path is not set, containerspy will try to connect to
+`/var/run/docker.sock` or `//./pipe/docker_engine` depending on host OS.

@@ -4,3 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.97"
+bollard = "0.18.1"
+confique = { version = "0.3.0", features = ["json5"] }
+opentelemetry = { version = "0.29.1", features = ["metrics"] }
+opentelemetry-otlp = { version = "0.29.0", features = ["grpc-tonic"] }
+opentelemetry_sdk = { version = "0.29.0", features = ["metrics"] }
+tokio = { version = "1.44.1", features = ["macros"] }
