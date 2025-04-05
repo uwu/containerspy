@@ -18,7 +18,11 @@ The main reason for this to exist is my personal difficulties deploying cAdvisor
 cAdvisor is rather RAM-heavy, and it really does not need to be so.
 It also requires a plethora of different mounts to get working inside of a container, including /sys, or even the entire
 / filesystem, and in some cases must be ran as a privileged user!
-Even with this, it can often just completely fail to collect CPU usage data depending on your distro.
+
+This is mostly because cAdvisor actually collects statistics on *cgroups*, not specifically on docker containers.
+It does have specific integration for containerd, docker, and podman, but it will also happily report statistics about
+systemd services to Prometheus too!
+If you only want to support Docker, you need not bother with cgroups, as the Docker Engine can report all you need.
 
 I have previously used Beszel for my monitoring, and it's agent runs as an unprivileged user,
 needs access to only the docker socket, collects all data out of the box, and has a lightweight footprint.
