@@ -215,6 +215,7 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "tokio",
+ "tokio-stream",
  "tokio-util",
 ]
 
