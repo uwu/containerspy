@@ -166,14 +166,14 @@ fn launch_stats_task(container: ContainerSummary, docker: Arc<Docker>, meter_pro
 		let shared_labels = &shared_labels[..];
 
 		//println!("Starting reporting for container: {shared_labels:?}");
-		
+
 		// create meters
 		let meter_container_cpu_usage_seconds_total = meter_provider.meter("test_meter").f64_counter("container_cpu_usage_seconds_total").with_unit("s").with_description("Cumulative cpu time consumed").build();
 
 		while let Some(val) = stats_stream.next().await {
 			if let Ok(stats) = val {
 				meter_container_cpu_usage_seconds_total.add(
-					Duration::from_nanos(stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage).as_secs_f64(),
+					cpu_delta_from_docker(stats.cpu_stats.cpu_usage.total_usage, stats.precpu_stats.cpu_usage.total_usage).as_secs_f64(),
 					shared_labels);
 			}
 			else {
@@ -183,4 +183,14 @@ fn launch_stats_task(container: ContainerSummary, docker: Arc<Docker>, meter_pro
 			}
 		}
 	})
+}
+
+fn cpu_delta_from_docker(cpu_usage: u64, precpu_usage: u64) -> Duration {
+	let delta = cpu_usage - precpu_usage;
+
+	// https://docs.docker.com/reference/api/engine/version/v1.48/#tag/Container/operation/ContainerStats
+	// see response schema > cpu_stats > cpu_usage > total_usage
+	let delta_ns = if cfg!(windows) { delta * 100 } else { delta };
+
+	Duration::from_nanos(delta_ns)
 }
