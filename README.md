@@ -43,7 +43,7 @@ TODO: will write once it actually works
 ## How to configure
 
 | `config.json`   | env var              | description                                                       | default    |
-| --------------- | -------------------- | ----------------------------------------------------------------- | ---------- |
+|-----------------|----------------------|-------------------------------------------------------------------|------------|
 | `docker_socket` | `CSPY_DOCKER_SOCKET` | The docker socket / named pipe to connect to                      | unset      |
 | `otlp_protocol` | `CSPY_OTLP_PROTO`    | Whether to use httpbinary, httpjson, or grpc to send OTLP metrics | httpbinary |
 
@@ -58,5 +58,47 @@ If a docker socket path is not set, containerspy will try to connect to
 This is intended to be a dropin replacement for cAdvisor, which lists its supported metrics
 [here](https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md).
 
+All generic labels attached to all metrics are implemented, and the status of labels applied only to specific metrics
+is listed below ("N/A" if there are none).
+
 The list of ContainerSpy's currently supported items from this list is:
- - `container_cpu_usage_seconds_total`
+
+| Name                                        | Has metric-specific labels | Notes                   |
+|---------------------------------------------|----------------------------|-------------------------|
+| `container_cpu_usage_seconds_total`         |                            |                         |
+| `container_cpu_user_seconds_total`          |                            |                         |
+| `container_cpu_system_seconds_total`        |                            |                         |
+| `container_cpu_cfs_periods_total`           |                            |                         |
+| `container_cpu_cfs_throttled_periods_total` |                            |                         |
+| `container_cpu_cfs_throttled_seconds_total` |                            |                         |
+| `container_fs_reads_bytes_total`            |                            | Not reported on Windows |
+| `container_fs_writes_bytes_total`           |                            | Not reported on Windows |
+| `container_last_seen`                       |                            |                         |
+
+The list of known omitted metrics are:
+
+| Name                                             | Reason                            |
+|--------------------------------------------------|-----------------------------------|
+| `container_cpu_load_average_10s`                 | Not reported by Docker Engine API |
+| `container_cpu_schedstat_run_periods_total`      | Not reported by Docker Engine API |
+| `container_cpu_schedstat_runqueue_seconds_total` | Not reported by Docker Engine API |
+| `container_cpu_schedstat_run_seconds_total`      | Not reported by Docker Engine API |
+| `container_file_descriptors`                     | Not reported by Docker Engine API |
+| `container_fs_inodes_free`                       | Not reported by Docker Engine API |
+| `container_fs_inodes_total`                      | Not reported by Docker Engine API |
+| `container_fs_io_current`                        | Not reported by Docker Engine API |
+| `container_fs_io_time_seconds_total`             | Only reported on cgroups v1 hosts |
+| `container_fs_io_time_weighted_seconds_total`    | Not reported by Docker Engine API |
+| `container_fs_limit_bytes`                       | Not reported by Docker Engine API |
+| `container_fs_read_seconds_total`                | Only reported on cgroups v1 hosts |
+| `container_fs_reads_merged_total`                | Only reported on cgroups v1 hosts |
+| `container_fs_reads_total`                       | Not reported by Docker Engine API |
+| `container_fs_sector_reads_total`                | Only reported on cgroups v1 hosts |
+| `container_fs_write_seconds_total`               | Only reported on cgroups v1 hosts |
+| `container_fs_writes_merged_total`               | Only reported on cgroups v1 hosts |
+| `container_fs_writes_total`                      | Not reported by Docker Engine API |
+| `container_fs_sector_writes_total`               | Only reported on cgroups v1 hosts |
+| `container_fs_usage_bytes`                       | Requires SystemDataUsage API      |
+| `container_hugetlb_failcnt`                      | Not reported by Docker Engine API |
+| `container_hugetlb_max_usage_bytes`              | Not reported by Docker Engine API |
+| `container_hugetlb_usage_bytes`                  | Not reported by Docker Engine API |
