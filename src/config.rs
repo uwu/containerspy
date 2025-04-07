@@ -35,7 +35,7 @@ pub static CONFIG: LazyLock<CspyConfig> = LazyLock::new(|| {
 struct ProtoDeserVisitor;
 
 /// deserialization boilerplate
-impl<'de> confique::serde::de::Visitor<'de> for ProtoDeserVisitor {
+impl confique::serde::de::Visitor<'_> for ProtoDeserVisitor {
 	type Value = Protocol;
 
 	fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {

@@ -4,9 +4,9 @@ use anyhow::Result;
 use bollard::Docker;
 use config::CONFIG;
 use opentelemetry_otlp::{MetricExporter, Protocol, WithExportConfig};
-use opentelemetry_sdk::metrics::{PeriodicReader, PeriodicReaderBuilder, SdkMeterProvider};
+use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
 use tokio::task::JoinHandle;
-use tokio::time::interval;
+use tokio::time::MissedTickBehavior;
 use tokio_util::sync::CancellationToken;
 
 mod config;
@@ -80,7 +80,8 @@ async fn main() -> Result<()> {
 		st2.cancel();
 	});
 
-	let mut container_search_interval = tokio::time::interval(Duration::from_secs(1));
+	let mut container_search_interval = tokio::time::interval(Duration::from_millis(CONFIG.otlp_export_interval.unwrap_or(6000)) / 2);
+	container_search_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
 	let mut tasks: BTreeMap<String, JoinHandle<()>> = BTreeMap::new();
 

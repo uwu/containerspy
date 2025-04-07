@@ -1,5 +1,5 @@
 use std::mem::MaybeUninit;
-use bollard::container::{BlkioStats, BlkioStatsEntry, StatsOptions};
+use bollard::container::{BlkioStatsEntry, StatsOptions};
 use bollard::models::ContainerSummary;
 use bollard::Docker;
 use opentelemetry::metrics::MeterProvider;
@@ -136,6 +136,19 @@ pub fn launch_stats_task(
 
 		while let Some(val) = stats_stream.next().await {
 			if let Ok(stats) = val {
+
+				// when a container exits, instead of a None we get sent Ok()s with zeroes in it forever, horror
+				if stats.cpu_stats.cpu_usage.total_usage == 0 {
+					if stats.precpu_stats.cpu_usage.total_usage != 0 { break; }
+					else {
+						// last time was ALSO a zero, so this MIGHT actually be (SOMEHOW?) legit,
+						// so just loop around again, and wait for the main task to abort() this worker task instead!
+						// which it will if this container died, or if we are gonna get real stats later, it won't...
+						// man i dont know i should probably just break lol
+						continue;
+					}
+				};
+
 				meter_container_cpu_usage_seconds_total.add(
 					cpu_delta_from_docker(
 						stats.cpu_stats.cpu_usage.total_usage,
