@@ -44,18 +44,18 @@ TODO: will write once it actually works
 
 | `config.json`          | env var              | description                                                       | default                                              |
 |------------------------|----------------------|-------------------------------------------------------------------|------------------------------------------------------|
-| `docker_socket`        | `CSPY_DOCKER_SOCKET` | The docker socket / named pipe to connect to                      | unset                                                |
+| `docker_socket`        | `CSPY_DOCKER_SOCKET` | The docker socket / named pipe to connect to                      | default docker socket for host OS                    |
 | `otlp_protocol`        | `CSPY_OTLP_PROTO`    | Whether to use httpbinary, httpjson, or grpc to send OTLP metrics | httpbinary                                           |
-| `otlp_endpoint`        | `CSPY_OTLP_ENDPOINT` | Where to post metrics to                                          | unset                                                |
+| `otlp_endpoint`        | `CSPY_OTLP_ENDPOINT` | Where to post metrics to                                          | OTLP spec default endpoint                           |
 | `otlp_export_interval` | `CSPY_OTLP_INTERVAL` | How often to report metrics, in milliseconds                      | value of `OTEL_METRIC_EXPORT_INTERVAL` or 60 seconds |
 
 You can set configuration in the config file specified in the `CSPY_CONFIG` env variable
 (`/etc/containerspy/config.json` by default), which supports JSON5 syntax, or configure via the `CSPY_` env vars.
 
-If a docker socket path is not set, containerspy will try to connect to
-`/var/run/docker.sock` or `//./pipe/docker_engine` depending on host OS.
+If a docker socket path is not set, ContainerSpy will try to connect to
+`/var/run/docker.sock` on *NIX or `//./pipe/docker_engine` on Windows.
 
-If an OTLP endpoint is not set, it will try to post to the default ports and endpoints for an OTLP collector running on
+If an endpoint is not set, CSpy will try to post to the default ports and endpoints for an OTLP collector running on
 the chosen protocol (`http://localhost:4318` for HTTP, `http://localhost:4317` for gRPC, see
 [here](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md) and
 [here](https://github.com/open-telemetry/opentelemetry-rust/blob/bc82d4f6/opentelemetry-otlp/src/exporter/mod.rs#L60)).
