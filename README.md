@@ -65,6 +65,13 @@ http://localhost:9090/api/v1/otlp/v1/metrics as your endpoint, swapping `localho
 
 ## Supported metrics
 
+!!! CONTAINERSPY DOES NOT SUPPORT CGROUPS V1 !!!
+*Most* RAM metrics will be unavailable on cgoups v1 and any v1-only metrics are excluded.
+ContainerSpy only officially supports Windows and Linux on cgroups v2. It will, however, not break on cgroups v1 hosts
+and should just have missing metrics.
+Yes, I know that implementing RAM metrics for cgroups is totally possible, and in fact more data is available in many
+cases, but I have no system to test on, and you really should be using v2 by now.
+
 This is intended to be a dropin replacement for cAdvisor, which lists its supported metrics
 [here](https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md).
 
@@ -112,3 +119,8 @@ The list of known omitted metrics are:
 | `container_hugetlb_failcnt`                      | Not reported by Docker Engine API |
 | `container_hugetlb_max_usage_bytes`              | Not reported by Docker Engine API |
 | `container_hugetlb_usage_bytes`                  | Not reported by Docker Engine API |
+| `container_llc_occupancy_bytes`                  | Not reported by Docker Engine API |
+| `container_memory_bandwidth_bytes`               | Not reported by Docker Engine API |
+| `container_memory_bandwidth_local_bytes`         | Not reported by Docker Engine API |
+...
+| `container_memory_max_usage_bytes`               | Only reported on cgroups v1 hosts |

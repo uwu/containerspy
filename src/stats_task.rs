@@ -1,5 +1,5 @@
 use std::mem::MaybeUninit;
-use bollard::container::{BlkioStatsEntry, StatsOptions};
+use bollard::container::{BlkioStatsEntry, MemoryStatsStats, MemoryStatsStatsV1, StatsOptions};
 use bollard::models::ContainerSummary;
 use bollard::Docker;
 use opentelemetry::metrics::MeterProvider;
@@ -211,7 +211,46 @@ pub fn launch_stats_task(
 				}
 
 				meter_container_last_seen.record(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(), shared_labels);
-			} else {
+
+				// cgroups values references:
+				// - https://github.com/docker/cli/blob/91cbde67/cli/command/container/stats_helpers.go#L230-L231
+				// - https://github.com/google/cadvisor/blob/f6e31a3c/info/v1/container.go#L389 (yes, v1, roll w it)
+				// - https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html
+
+				if let Some(all_usage) = stats.memory_stats.usage {
+						if cfg!(windows) {
+							// todo
+							// i have no way to test cgroups v2 so only work on v1 - see readme for more info
+						} else if let Some(MemoryStatsStats::V2(v2stats)) = stats.memory_stats.stats {
+							// container_memory_cache
+
+
+							// container_memory_failcnt only on cgroups v1
+
+							// container_memory_failures_total
+							v2stats.pgfault; // label failure_type=pgfault
+							v2stats.pgmajfault; // label failure_type=pgmajfault
+
+							// container_memory_mapped_file
+							v2stats.file; // includes tmpfs
+
+							// container_memory_max_usage_bytes only on cgroups v1
+
+							// container_memory_migrate
+
+
+							// container_memory_numa_pages omitted cause its hard :<
+
+							// container_memory_rss: may need recalcing
+
+							// container_memory_swap: can't get
+
+							// container_memory_usage_bytes: how?
+							
+							// container_memory_working_set_bytes: not reported
+						}
+					}
+				} else {
 				// failed to get stats, log as such:
 				// TODO: use json logging or syslog so loki can understand this lol
 				println!(
