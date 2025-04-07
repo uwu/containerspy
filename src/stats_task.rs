@@ -1,4 +1,5 @@
-use bollard::container::StatsOptions;
+use std::mem::MaybeUninit;
+use bollard::container::{BlkioStats, BlkioStatsEntry, StatsOptions};
 use bollard::models::ContainerSummary;
 use bollard::Docker;
 use opentelemetry::metrics::MeterProvider;
@@ -37,17 +38,24 @@ pub fn launch_stats_task(
 			}),
 		);
 
-		// drop the first read
+		// use the first read only for stats diffing for blkio - don't need for cpu thanks to precpu.
+		#[allow(unused_assignments)]
+		let mut first_read = MaybeUninit::uninit();
+
 		loop {
 			match stats_stream.next().await {
 				None => return,
-				Some(Ok(_)) => break,
+				Some(Ok(st)) => { first_read = MaybeUninit::new(st); break },
 				Some(Err(err)) => {
 					// TODO: use json logging or syslog so loki can understand this lol
 					println!("Failed to get stats for container {container_id}!: {err:?}");
 				}
 			}
 		}
+
+		// I'm going to rust jail!
+		let first_read = unsafe { first_read.assume_init() };
+		let mut last_io_stats = first_read.blkio_stats.io_service_bytes_recursive;
 
 		// container labels shared for all metrics
 		let mut shared_labels = vec![
@@ -112,18 +120,17 @@ pub fn launch_stats_task(
 
 		let meter_container_fs_reads_bytes_total = meter
 			.u64_counter("container_fs_reads_bytes_total")
-			.with_unit("B")
+			.with_unit("By")
 			.with_description("Cumulative bytes read")
 			.build();
 		let meter_container_fs_writes_bytes_total = meter
 			.u64_counter("container_fs_writes_bytes_total")
-			.with_unit("B")
+			.with_unit("By")
 			.with_description("Cumulative bytes written")
 			.build();
 
 		let meter_container_last_seen = meter
 			.u64_gauge("container_last_seen")
-			.with_unit("s")
 			.with_description("Last time this container was seen by ContainerSpy")
 			.build();
 
@@ -177,17 +184,17 @@ pub fn launch_stats_task(
 				// io_service_bytes_recursive exists only on cgroups v1.
 				// storage_stats only exists on windows.
 				if let Some(service_bytes_rec) = stats.blkio_stats.io_service_bytes_recursive {
-					println!("{service_bytes_rec:?}"); // todo: remove
+					// need to calculate deltas for this
+					if let Some(last) = &last_io_stats {
 
-					for entry in &service_bytes_rec {
-						match entry.op.as_str() {
-							"read" =>
-								meter_container_fs_reads_bytes_total.add(entry.value, shared_labels),
-							"write" =>
-								meter_container_fs_writes_bytes_total.add(entry.value, shared_labels),
-							_ => println!("Unknown service_bytes_recursive entry type {}", entry.op)
-						}
+						let (last_r, last_w) = get_rw_totals(last);
+						let (curr_r, curr_w) = get_rw_totals(&service_bytes_rec);
+
+						meter_container_fs_reads_bytes_total.add(curr_r - last_r, shared_labels);
+						meter_container_fs_writes_bytes_total.add(curr_w - last_w, shared_labels);
 					}
+
+					last_io_stats = Some(service_bytes_rec);
 				}
 
 				meter_container_last_seen.record(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(), shared_labels);
@@ -211,4 +218,19 @@ fn cpu_delta_from_docker(cpu_usage: u64, precpu_usage: u64) -> Duration {
 	let delta_ns = if cfg!(windows) { delta * 100 } else { delta };
 
 	Duration::from_nanos(delta_ns)
+}
+
+fn get_rw_totals<'a>(iter: impl IntoIterator<Item = &'a BlkioStatsEntry>) -> (u64, u64) {
+	let mut read = 0;
+	let mut write = 0;
+
+	for entry in iter {
+		match entry.op.as_str() {
+			"read" => read += entry.value,
+			"write" => write += entry.value,
+			_ => println!("Unknown service_bytes_recursive entry type {}", entry.op)
+		}
+	}
+
+	(read, write)
 }
