@@ -14,11 +14,14 @@ pub struct CspyConfig {
 
 	#[config(env = "CSPY_OTLP_ENDPOINT")]
 	pub otlp_endpoint: Option<String>,
+
+	#[config(env = "CSPY_OTLP_INTERVAL")]
+	pub otlp_export_interval: Option<u64>,
 }
 
 pub static CONFIG: LazyLock<CspyConfig> = LazyLock::new(|| {
 	let cfg_loc = std::env::var("CSPY_CONFIG");
-	let cfg_loc = cfg_loc.as_deref().ok().unwrap_or(&"/etc/containerspy/config.json");
+	let cfg_loc = cfg_loc.as_deref().ok().unwrap_or("/etc/containerspy/config.json");
 
 	CspyConfig::builder()
 		.env()

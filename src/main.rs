@@ -4,57 +4,67 @@ use anyhow::Result;
 use bollard::Docker;
 use config::CONFIG;
 use opentelemetry_otlp::{MetricExporter, Protocol, WithExportConfig};
-use opentelemetry_sdk::metrics::SdkMeterProvider;
+use opentelemetry_sdk::metrics::{PeriodicReader, PeriodicReaderBuilder, SdkMeterProvider};
 use tokio::task::JoinHandle;
+use tokio::time::interval;
 use tokio_util::sync::CancellationToken;
 
 mod config;
 mod stats_task;
 
 fn setup_otlp() -> Result<SdkMeterProvider> {
-	let metric_exporter =
-		match CONFIG.otlp_protocol {
-			Protocol::HttpBinary | Protocol::HttpJson => {
-				let builder = MetricExporter::builder().with_http().with_protocol(CONFIG.otlp_protocol);
-				let builder =
-					if let Some(e) = &CONFIG.otlp_endpoint {
-						builder.with_endpoint(e)
-					} else {
-						builder
-					};
+	let metric_exporter = match CONFIG.otlp_protocol {
+		Protocol::HttpBinary | Protocol::HttpJson => {
+			let builder = MetricExporter::builder()
+				.with_http()
+				.with_protocol(CONFIG.otlp_protocol);
+			let builder = if let Some(e) = &CONFIG.otlp_endpoint {
+				builder.with_endpoint(e)
+			} else {
+				builder
+			};
 
-				builder.build()?
-			},
-			Protocol::Grpc => {
-				let builder = MetricExporter::builder().with_tonic().with_protocol(Protocol::Grpc);
+			builder.build()?
+		}
+		Protocol::Grpc => {
+			let builder = MetricExporter::builder()
+				.with_tonic()
+				.with_protocol(Protocol::Grpc);
 
-				let builder =
-					if let Some(e) = &CONFIG.otlp_endpoint {
-						builder.with_endpoint(e.as_str())
-					} else {
-						builder
-					};
+			let builder = if let Some(e) = &CONFIG.otlp_endpoint {
+				builder.with_endpoint(e.as_str())
+			} else {
+				builder
+			};
 
-				builder.build()?
-			},
-		};
+			builder.build()?
+		}
+	};
+
+	// if we have a CSPY_OTLP_INTERVAL, apply that,
+	// else use default behaviour which reads OTEL_METRIC_EXPORT_INTERVAL else uses one minute as the interval
+	// note that a PeriodicReader without setting .with_interval is equivalent to using .with_periodic_exporter
+
+	let reader_builder = PeriodicReader::builder(metric_exporter);
+	let reader_builder = if let Some(interval) = CONFIG.otlp_export_interval {
+		reader_builder.with_interval(Duration::from_millis(interval))
+	} else {
+		reader_builder
+	};
 
 	Ok(SdkMeterProvider::builder()
-			.with_periodic_exporter(metric_exporter)
-			.build())
+		.with_reader(reader_builder.build())
+		.build())
 }
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
 	// open a docker connection
-	let docker = Arc::new(
-		if let Some(path) = &CONFIG.docker_socket {
-			Docker::connect_with_socket(path, 60, bollard::API_DEFAULT_VERSION)?
-		}
-		else {
-			Docker::connect_with_local_defaults()?
-		}
-	);
+	let docker = Arc::new(if let Some(path) = &CONFIG.docker_socket {
+		Docker::connect_with_socket(path, 60, bollard::API_DEFAULT_VERSION)?
+	} else {
+		Docker::connect_with_local_defaults()?
+	});
 
 	// connect the OTLP exporter
 	let meter_provider = Arc::new(setup_otlp()?);
@@ -64,7 +74,9 @@ async fn main() -> Result<()> {
 	let st2 = shutdown_token.clone(); // to be moved into the task
 
 	tokio::spawn(async move {
-		tokio::signal::ctrl_c().await.expect("Failed to setup ctrl-c handler");
+		tokio::signal::ctrl_c()
+			.await
+			.expect("Failed to setup ctrl-c handler");
 		st2.cancel();
 	});
 
@@ -87,7 +99,10 @@ async fn main() -> Result<()> {
 
 		for (cont, handle) in &tasks {
 			// funny O(n^2) loop
-			if containers.binary_search_by(|c| c.id.as_ref().unwrap().cmp(cont)).is_err() {
+			if containers
+				.binary_search_by(|c| c.id.as_ref().unwrap().cmp(cont))
+				.is_err()
+			{
 				handle.abort();
 				to_remove.push(cont.clone());
 			}
@@ -102,7 +117,10 @@ async fn main() -> Result<()> {
 			let id_string = cont.id.as_ref().unwrap();
 			if !tasks.contains_key(id_string) {
 				// all this string cloning hurts me
-				tasks.insert(id_string.clone(), stats_task::launch_stats_task(cont, docker.clone(), meter_provider.clone()));
+				tasks.insert(
+					id_string.clone(),
+					stats_task::launch_stats_task(cont, docker.clone(), meter_provider.clone()),
+				);
 			}
 		}
 	}
