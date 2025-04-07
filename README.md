@@ -80,17 +80,25 @@ is listed below ("N/A" if there are none).
 
 The list of ContainerSpy's currently supported items from this list is:
 
-| Name                                        | Has metric-specific labels | Notes                   |
-|---------------------------------------------|----------------------------|-------------------------|
-| `container_cpu_usage_seconds_total`         |                            |                         |
-| `container_cpu_user_seconds_total`          |                            |                         |
-| `container_cpu_system_seconds_total`        |                            |                         |
-| `container_cpu_cfs_periods_total`           |                            |                         |
-| `container_cpu_cfs_throttled_periods_total` |                            |                         |
-| `container_cpu_cfs_throttled_seconds_total` |                            |                         |
-| `container_fs_reads_bytes_total`            |                            | Not reported on Windows |
-| `container_fs_writes_bytes_total`           |                            | Not reported on Windows |
-| `container_last_seen`                       |                            |                         |
+| Name                                               | Has metric-specific labels | Notes                   |
+|----------------------------------------------------|----------------------------|-------------------------|
+| `container_cpu_usage_seconds_total`                |                            |                         |
+| `container_cpu_user_seconds_total`                 |                            |                         |
+| `container_cpu_system_seconds_total`               |                            |                         |
+| `container_cpu_cfs_periods_total`                  |                            |                         |
+| `container_cpu_cfs_throttled_periods_total`        |                            |                         |
+| `container_cpu_cfs_throttled_seconds_total`        |                            |                         |
+| `container_fs_reads_bytes_total`                   |                            | Not reported on Windows |
+| `container_fs_writes_bytes_total`                  |                            | Not reported on Windows |
+| `container_last_seen`                              |                            |                         |
+| `container_network_receive_bytes_total`            | `interface`                |                         |
+| `container_network_receive_errors_total`           | `interface`                | Not reported on Windows |
+| `container_network_receive_packets_dropped_total`  | `interface`                |                         |
+| `container_network_receive_packets_total`          | `interface`                |                         |
+| `container_network_transmit_bytes_total`           | `interface`                |                         |
+| `container_network_transmit_errors_total`          | `interface`                | Not reported on Windows |
+| `container_network_transmit_packets_dropped_total` | `interface`                |                         |
+| `container_network_transmit_packets_total`         | `interface`                |                         |
 
 The list of known omitted metrics are:
 
@@ -122,5 +130,11 @@ The list of known omitted metrics are:
 | `container_llc_occupancy_bytes`                  | Not reported by Docker Engine API |
 | `container_memory_bandwidth_bytes`               | Not reported by Docker Engine API |
 | `container_memory_bandwidth_local_bytes`         | Not reported by Docker Engine API |
-...
+| ...                                              |                                   |
 | `container_memory_max_usage_bytes`               | Only reported on cgroups v1 hosts |
+| ...                                              |                                   |
+| `container_network_advance_tcp_stats_total`      | Not reported by Docker Engine API |
+| `container_network_tcp6_usage_total`             | Not reported by Docker Engine API |
+| `container_network_tcp_usage_total`              | Not reported by Docker Engine API |
+| `container_network_udp6_usage_total`             | Not reported by Docker Engine API |
+| `container_network_udp_usage_total`              | Not reported by Docker Engine API |
