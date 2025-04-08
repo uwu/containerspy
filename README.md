@@ -36,9 +36,79 @@ configurable email alerting OOTB with very little setup. It is a great piece of 
 
 My motivation to move to a Prometheus/Grafana setup is that I want the centralised rich logging that Loki can give me.
 
-## How to set up
+## Setup Instructions
 
-TODO: will write once it actually works
+See the following section for detailed instructions on configuring containerspy.
+
+<details>
+<summary>Running the binary directly</summary>
+
+If you are running an instance of the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)
+on localhost, then you can simply
+```bash
+./containerspy
+```
+
+To pass configuration options you can either (recommended for quick testing) use env vars:
+```bash
+CSPY_OLTP_PROTO=grpc ./containerspy
+```
+
+or you can create a config file. If you create it in `/etc/containerspy/config.json`, it will be picked up
+automatically, and you can just run `./containerspy` as before. If you create it anywhere else, you can specify its
+location as so:
+```bash
+CSPY_CONFIG=./config.json ./containerspy
+```
+</details>
+
+<details>
+<summary>Docker</summary>
+
+You can use either env vars or a config.json file to configure containerspy:
+
+```bash
+docker run \
+	-v /var/run/docker.sock:/var/run/docker.sock:ro \
+	-v ./config.json:/etc/containerspy/config.json:ro \
+	ghcr.io/uwu/containerspy
+```
+
+```bash
+docker run \
+	-v /var/run/docker.sock:/var/run/docker.sock:ro \
+	-e CSPY_XXX=YYY \ # see the configuring instructions below
+	ghcr.io/uwu/containerspy
+```
+</details>
+
+<details>
+<summary>Docker Compose</summary>
+
+```yml
+services:
+	containerspy:
+		image: ghcr.io/uwu/containerspy
+		volumes:
+			- /var/run/docker.sock:/var/run/docker.sock:ro
+		environment:
+			CSPY_OTLP_ENDPOINT: http://collector:4318
+#			CSPY_OTLP_INTERVAL: 30000 # 30s
+		networks: [otlpnet]
+
+# OTLP collector (you can use any OTLP receiver such as Alloy, Mimir, Prometheus)
+#	collector:
+#		image: otel/opentelemetry-collector-contrib
+#		networks: [otlpnet]
+#		...
+
+networks:
+	otlpnet:
+```
+</details>
+
+It is also possible to run containerspy as a service for your preferred init system, if that's your preference.
+No service files / units are provided here, please research your init system.
 
 ## How to configure
 
@@ -62,6 +132,16 @@ the chosen protocol (`http://localhost:4318` for HTTP, `http://localhost:4317` f
 
 Note: to send directly to Prometheus (with `--enable-feature=otlp-write-receiver`), use
 http://localhost:9090/api/v1/otlp/v1/metrics as your endpoint, swapping `localhost:9090` for your Prometheus `host:port`.
+
+## TODO
+
+ContainerSpy is now ready for deployment, but is WIP. The planned features are:
+ - implement cpu and fs metric labels
+ - implement any metrics that should be available on Windows but aren't
+ - automatically load configs from ./config.json too
+ - (maybe?) add `--config` as another way to specify the location of the config file
+ - use structured (json or syslog) logging to integrate nicely with log aggregation systems like Loki
+ - (maybe?) read swap metrics if /sys is mounted (technically out of scope but might add anyway, not sure...)
 
 ## Supported metrics
 
