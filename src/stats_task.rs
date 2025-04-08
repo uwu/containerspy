@@ -30,6 +30,7 @@ pub fn launch_stats_task(
 
 		let meter_name = "cspy_".to_string() + container_id.as_str();
 		// lol 'static moment
+		// TODO: this is acceptable for specifically the use case of the michiru deployment, but not more generally at all
 		let meter_name = &*Box::leak(meter_name.into_boxed_str());
 
 		let mut stats_stream = docker.stats(
