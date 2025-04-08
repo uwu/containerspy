@@ -80,61 +80,71 @@ is listed below ("N/A" if there are none).
 
 The list of ContainerSpy's currently supported items from this list is:
 
-| Name                                               | Has metric-specific labels | Notes                   |
-|----------------------------------------------------|----------------------------|-------------------------|
-| `container_cpu_usage_seconds_total`                |                            |                         |
-| `container_cpu_user_seconds_total`                 |                            |                         |
-| `container_cpu_system_seconds_total`               |                            |                         |
-| `container_cpu_cfs_periods_total`                  |                            |                         |
-| `container_cpu_cfs_throttled_periods_total`        |                            |                         |
-| `container_cpu_cfs_throttled_seconds_total`        |                            |                         |
-| `container_fs_reads_bytes_total`                   |                            | Not reported on Windows |
-| `container_fs_writes_bytes_total`                  |                            | Not reported on Windows |
-| `container_last_seen`                              |                            |                         |
-| `container_network_receive_bytes_total`            | `interface`                |                         |
-| `container_network_receive_errors_total`           | `interface`                | Not reported on Windows |
-| `container_network_receive_packets_dropped_total`  | `interface`                |                         |
-| `container_network_receive_packets_total`          | `interface`                |                         |
-| `container_network_transmit_bytes_total`           | `interface`                |                         |
-| `container_network_transmit_errors_total`          | `interface`                | Not reported on Windows |
-| `container_network_transmit_packets_dropped_total` | `interface`                |                         |
-| `container_network_transmit_packets_total`         | `interface`                |                         |
+| Name                                               | Has metric-specific labels | Notes                          |
+|----------------------------------------------------|----------------------------|--------------------------------|
+| `container_cpu_usage_seconds_total`                |                            |                                |
+| `container_cpu_user_seconds_total`                 |                            |                                |
+| `container_cpu_system_seconds_total`               |                            |                                |
+| `container_cpu_cfs_periods_total`                  |                            |                                |
+| `container_cpu_cfs_throttled_periods_total`        |                            |                                |
+| `container_cpu_cfs_throttled_seconds_total`        |                            |                                |
+| `container_fs_reads_bytes_total`                   |                            | Not reported on Windows (TODO) |
+| `container_fs_writes_bytes_total`                  |                            | Not reported on Windows (TODO) |
+| `container_last_seen`                              |                            |                                |
+| `container_network_receive_bytes_total`            | `interface`                |                                |
+| `container_network_receive_errors_total`           | `interface`                | Not reported on Windows        |
+| `container_network_receive_packets_dropped_total`  | `interface`                |                                |
+| `container_network_receive_packets_total`          | `interface`                |                                |
+| `container_network_transmit_bytes_total`           | `interface`                |                                |
+| `container_network_transmit_errors_total`          | `interface`                | Not reported on Windows        |
+| `container_network_transmit_packets_dropped_total` | `interface`                |                                |
+| `container_network_transmit_packets_total`         | `interface`                |                                |
+| `container_start_time_seconds`                     |                            |                                |
 
 The list of known omitted metrics are:
 
-| Name                                             | Reason                            |
-|--------------------------------------------------|-----------------------------------|
-| `container_cpu_load_average_10s`                 | Not reported by Docker Engine API |
-| `container_cpu_schedstat_run_periods_total`      | Not reported by Docker Engine API |
-| `container_cpu_schedstat_runqueue_seconds_total` | Not reported by Docker Engine API |
-| `container_cpu_schedstat_run_seconds_total`      | Not reported by Docker Engine API |
-| `container_file_descriptors`                     | Not reported by Docker Engine API |
-| `container_fs_inodes_free`                       | Not reported by Docker Engine API |
-| `container_fs_inodes_total`                      | Not reported by Docker Engine API |
-| `container_fs_io_current`                        | Not reported by Docker Engine API |
-| `container_fs_io_time_seconds_total`             | Only reported on cgroups v1 hosts |
-| `container_fs_io_time_weighted_seconds_total`    | Not reported by Docker Engine API |
-| `container_fs_limit_bytes`                       | Not reported by Docker Engine API |
-| `container_fs_read_seconds_total`                | Only reported on cgroups v1 hosts |
-| `container_fs_reads_merged_total`                | Only reported on cgroups v1 hosts |
-| `container_fs_reads_total`                       | Not reported by Docker Engine API |
-| `container_fs_sector_reads_total`                | Only reported on cgroups v1 hosts |
-| `container_fs_write_seconds_total`               | Only reported on cgroups v1 hosts |
-| `container_fs_writes_merged_total`               | Only reported on cgroups v1 hosts |
-| `container_fs_writes_total`                      | Not reported by Docker Engine API |
-| `container_fs_sector_writes_total`               | Only reported on cgroups v1 hosts |
-| `container_fs_usage_bytes`                       | Requires SystemDataUsage API      |
-| `container_hugetlb_failcnt`                      | Not reported by Docker Engine API |
-| `container_hugetlb_max_usage_bytes`              | Not reported by Docker Engine API |
-| `container_hugetlb_usage_bytes`                  | Not reported by Docker Engine API |
-| `container_llc_occupancy_bytes`                  | Not reported by Docker Engine API |
-| `container_memory_bandwidth_bytes`               | Not reported by Docker Engine API |
-| `container_memory_bandwidth_local_bytes`         | Not reported by Docker Engine API |
-| ...                                              |                                   |
-| `container_memory_max_usage_bytes`               | Only reported on cgroups v1 hosts |
-| ...                                              |                                   |
-| `container_network_advance_tcp_stats_total`      | Not reported by Docker Engine API |
-| `container_network_tcp6_usage_total`             | Not reported by Docker Engine API |
-| `container_network_tcp_usage_total`              | Not reported by Docker Engine API |
-| `container_network_udp6_usage_total`             | Not reported by Docker Engine API |
-| `container_network_udp_usage_total`              | Not reported by Docker Engine API |
+| Name                                             | Reason                                                      |
+|--------------------------------------------------|-------------------------------------------------------------|
+| `container_cpu_load_average_10s`                 | Not reported by Docker Engine API                           |
+| `container_cpu_schedstat_run_periods_total`      | Not reported by Docker Engine API                           |
+| `container_cpu_schedstat_runqueue_seconds_total` | Not reported by Docker Engine API                           |
+| `container_cpu_schedstat_run_seconds_total`      | Not reported by Docker Engine API                           |
+| `container_file_descriptors`                     | Not reported by Docker Engine API                           |
+| `container_fs_inodes_free`                       | Not reported by Docker Engine API                           |
+| `container_fs_inodes_total`                      | Not reported by Docker Engine API                           |
+| `container_fs_io_current`                        | Not reported by Docker Engine API                           |
+| `container_fs_io_time_seconds_total`             | Only reported on cgroups v1 hosts                           |
+| `container_fs_io_time_weighted_seconds_total`    | Not reported by Docker Engine API                           |
+| `container_fs_limit_bytes`                       | Not reported by Docker Engine API                           |
+| `container_fs_read_seconds_total`                | Only reported on cgroups v1 hosts                           |
+| `container_fs_reads_merged_total`                | Only reported on cgroups v1 hosts                           |
+| `container_fs_reads_total`                       | Not reported by Docker Engine API                           |
+| `container_fs_sector_reads_total`                | Only reported on cgroups v1 hosts                           |
+| `container_fs_write_seconds_total`               | Only reported on cgroups v1 hosts                           |
+| `container_fs_writes_merged_total`               | Only reported on cgroups v1 hosts                           |
+| `container_fs_writes_total`                      | Not reported by Docker Engine API                           |
+| `container_fs_sector_writes_total`               | Only reported on cgroups v1 hosts                           |
+| `container_fs_usage_bytes`                       | Requires SystemDataUsage API                                |
+| `container_hugetlb_failcnt`                      | Not reported by Docker Engine API                           |
+| `container_hugetlb_max_usage_bytes`              | Not reported by Docker Engine API                           |
+| `container_hugetlb_usage_bytes`                  | Not reported by Docker Engine API                           |
+| `container_llc_occupancy_bytes`                  | Not reported by Docker Engine API                           |
+| `container_memory_bandwidth_bytes`               | Not reported by Docker Engine API                           |
+| `container_memory_bandwidth_local_bytes`         | Not reported by Docker Engine API                           |
+| ...                                              |                                                             |
+| `container_memory_max_usage_bytes`               | Only reported on cgroups v1 hosts                           |
+| ...                                              |                                                             |
+| `container_network_advance_tcp_stats_total`      | Not reported by Docker Engine API                           |
+| `container_network_tcp6_usage_total`             | Not reported by Docker Engine API                           |
+| `container_network_tcp_usage_total`              | Not reported by Docker Engine API                           |
+| `container_network_udp6_usage_total`             | Not reported by Docker Engine API                           |
+| `container_network_udp_usage_total`              | Not reported by Docker Engine API                           |
+| `container_oom_events_total`                     | Not reported by Docker Engine API                           |
+| `container_perf_*`, `container_uncore_perf_*`    | Not reported by Docker Engine API                           |
+| `container_processes`                            | Not reported by Docker Engine API (only threads, not procs) |
+| `container_referenced_bytes`                     | Collection affects paging and causes mem latency            |
+| `container_sockets`                              | Not reported by Docker Engine API                           |
+| `container_spec_*`                               | Not reported by Docker Engine API                           |
+| `container_tasks_state`                          | Not reported by Docker Engine API                           |
+| `container_ulimits_soft`                         | Not reported by Docker Engine API                           |
+| `machine_*`                                      | Out of scope, liable to be incorrect when containerised     |

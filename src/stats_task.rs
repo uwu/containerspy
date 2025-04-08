@@ -179,6 +179,21 @@ pub fn launch_stats_task(
 		let meter_container_network_transmit_packets_total = meter
 			.u64_counter("container_network_transmit_packets_total")
 			.with_description("Cumulative count of packets transmitted")
+			.build();;
+
+		let meter_container_start_time_seconds = meter
+			.u64_gauge("container_start_time_seconds")
+			.with_unit("s")
+			.with_description("Start time of the container since unix epoch")
+			.build();
+
+		let meter_container_threads = meter
+			.u64_gauge("container_threads")
+			.with_description("Number of threads running inside the container")
+			.build();
+		let meter_container_threads_max = meter
+			.u64_gauge("container_threads_max")
+			.with_description("Maximum number of threads allowed inside the container")
 			.build();
 
 		while let Some(val) = stats_stream.next().await {
@@ -258,6 +273,7 @@ pub fn launch_stats_task(
 
 					last_io_stats = Some(service_bytes_rec);
 				}
+				// TODO: handle windows storage stats
 
 				meter_container_last_seen.record(
 					SystemTime::now()
@@ -356,6 +372,20 @@ pub fn launch_stats_task(
 					}
 				}
 				last_net_stats = stats.networks;
+
+				if let Some(pid_count) = stats.pids_stats.current {
+					// pid_count is generally the *thread* count.
+					meter_container_threads.record(pid_count, shared_labels);
+				}
+				if let Some(pid_limit) = stats.pids_stats.limit {
+					// pid_count is generally the *thread* count.
+					meter_container_threads_max.record(pid_limit, shared_labels);
+				}
+
+				if let Some(Ok(secs)) = container.created.map(u64::try_from) {
+					//let date = UNIX_EPOCH + Duration::from_nanos(secs);
+					meter_container_start_time_seconds.record(secs, shared_labels);
+				}
 			} else {
 				// failed to get stats, log as such:
 				// TODO: use json logging or syslog so loki can understand this lol
