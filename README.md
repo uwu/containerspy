@@ -80,26 +80,34 @@ is listed below ("N/A" if there are none).
 
 The list of ContainerSpy's currently supported items from this list is:
 
-| Name                                               | Has metric-specific labels | Notes                          |
-|----------------------------------------------------|----------------------------|--------------------------------|
-| `container_cpu_usage_seconds_total`                |                            |                                |
-| `container_cpu_user_seconds_total`                 |                            |                                |
-| `container_cpu_system_seconds_total`               |                            |                                |
-| `container_cpu_cfs_periods_total`                  |                            |                                |
-| `container_cpu_cfs_throttled_periods_total`        |                            |                                |
-| `container_cpu_cfs_throttled_seconds_total`        |                            |                                |
-| `container_fs_reads_bytes_total`                   |                            | Not reported on Windows (TODO) |
-| `container_fs_writes_bytes_total`                  |                            | Not reported on Windows (TODO) |
-| `container_last_seen`                              |                            |                                |
-| `container_network_receive_bytes_total`            | `interface`                |                                |
-| `container_network_receive_errors_total`           | `interface`                | Not reported on Windows        |
-| `container_network_receive_packets_dropped_total`  | `interface`                |                                |
-| `container_network_receive_packets_total`          | `interface`                |                                |
-| `container_network_transmit_bytes_total`           | `interface`                |                                |
-| `container_network_transmit_errors_total`          | `interface`                | Not reported on Windows        |
-| `container_network_transmit_packets_dropped_total` | `interface`                |                                |
-| `container_network_transmit_packets_total`         | `interface`                |                                |
-| `container_start_time_seconds`                     |                            |                                |
+| Name                                               | Metric-specific labels  | Notes                          |
+|----------------------------------------------------|-------------------------|--------------------------------|
+| `container_cpu_usage_seconds_total`                | TODO: `cpu`             |                                |
+| `container_cpu_user_seconds_total`                 | N/A                     |                                |
+| `container_cpu_system_seconds_total`               | N/A                     |                                |
+| `container_cpu_cfs_periods_total`                  |                         |                                |
+| `container_cpu_cfs_throttled_periods_total`        |                         |                                |
+| `container_cpu_cfs_throttled_seconds_total`        |                         |                                |
+| `container_fs_reads_bytes_total`                   | TODO: `device`          | Not reported on Windows (TODO) |
+| `container_fs_writes_bytes_total`                  | TODO: `device`          | Not reported on Windows (TODO) |
+| `container_last_seen`                              | N/A                     |                                |
+| `container_memory_cache`                           | N/A                     | Not reported on Windows        |
+| `container_memory_failures_total`                  | `failure_type`, `scope` | Not reported on Windows        |
+| `container_memory_mapped_file`                     | N/A                     | Not reported on Windows        |
+| `container_memory_rss`                             | N/A                     | Not reported on Windows        |
+| `container_memory_usage_bytes`                     | N/A                     | Not reported on Windows        |
+| `container_memory_working_set_bytes`               | N/A                     | Not reported on Windows        |
+| `container_network_receive_bytes_total`            | `interface`             |                                |
+| `container_network_receive_errors_total`           | `interface`             | Not reported on Windows        |
+| `container_network_receive_packets_dropped_total`  | `interface`             |                                |
+| `container_network_receive_packets_total`          | `interface`             |                                |
+| `container_network_transmit_bytes_total`           | `interface`             |                                |
+| `container_network_transmit_errors_total`          | `interface`             | Not reported on Windows        |
+| `container_network_transmit_packets_dropped_total` | `interface`             |                                |
+| `container_network_transmit_packets_total`         | `interface`             |                                |
+| `container_start_time_seconds`                     | N/A                     |                                |
+
+Additional TODO: figure out which of these metrics are or are not reportable on Windows.
 
 The list of known omitted metrics are:
 
@@ -131,9 +139,12 @@ The list of known omitted metrics are:
 | `container_llc_occupancy_bytes`                  | Not reported by Docker Engine API                           |
 | `container_memory_bandwidth_bytes`               | Not reported by Docker Engine API                           |
 | `container_memory_bandwidth_local_bytes`         | Not reported by Docker Engine API                           |
-| ...                                              |                                                             |
+| `container_memory_failcnt`                       | Only reported on cgroups v1 hosts                           |
+| `container_memory_kernel_usage`                  | Undocumented, cspy has it, but i'm unsure my math's right!  |
 | `container_memory_max_usage_bytes`               | Only reported on cgroups v1 hosts                           |
-| ...                                              |                                                             |
+| `container_memory_migrate`                       | Not reported by Docker Engine API (or cA on my pc!)         |
+| `container_memory_numa_pages`                    | Difficult to collect, not reported by cA on my pc           |
+| `container_memory_swap`                          | Not reported by Docker Engine API                           |
 | `container_network_advance_tcp_stats_total`      | Not reported by Docker Engine API                           |
 | `container_network_tcp6_usage_total`             | Not reported by Docker Engine API                           |
 | `container_network_tcp_usage_total`              | Not reported by Docker Engine API                           |

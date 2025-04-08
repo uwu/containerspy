@@ -60,7 +60,7 @@ pub fn launch_stats_task(
 
 		// I'm going to rust jail!
 		let first_read = unsafe { first_read.assume_init() };
-		let Stats { blkio_stats, networks: mut last_net_stats, .. } = first_read;
+		let Stats { blkio_stats, networks: mut last_net_stats, memory_stats: mut last_mem_stats, .. } = first_read;
 
 		let mut last_io_stats = blkio_stats.io_service_bytes_recursive;
 
@@ -86,9 +86,33 @@ pub fn launch_stats_task(
 			}
 		}
 
-		// free space and make mutable
+		// other label sets that are static per container
+		let mut labels_mem_container_min_c = shared_labels.clone();
+		labels_mem_container_min_c.push(KeyValue::new("failure_type", "pgfault"));
+
+		let mut labels_mem_container_maj_c = shared_labels.clone();
+		labels_mem_container_maj_c.push(KeyValue::new("failure_type", "pgmajfault"));
+
+		let mut labels_mem_container_min_h = labels_mem_container_min_c.clone();
+		labels_mem_container_min_h.push(KeyValue::new("scope", "hierarchy"));
+		labels_mem_container_min_c.push(KeyValue::new("scope", "container"));
+
+		let mut labels_mem_container_maj_h = labels_mem_container_maj_c.clone();
+		labels_mem_container_maj_h.push(KeyValue::new("scope", "hierarchy"));
+		labels_mem_container_maj_c.push(KeyValue::new("scope", "container"));
+
+		// free space and make immutable
 		shared_labels.shrink_to_fit();
 		let shared_labels = &shared_labels[..];
+
+		labels_mem_container_min_c.shrink_to_fit();
+		labels_mem_container_min_h.shrink_to_fit();
+		labels_mem_container_maj_c.shrink_to_fit();
+		labels_mem_container_maj_h.shrink_to_fit();
+		let labels_mem_container_min_c = &labels_mem_container_min_c[..];
+		let labels_mem_container_min_h = &labels_mem_container_min_h[..];
+		let labels_mem_container_maj_c = &labels_mem_container_maj_c[..];
+		let labels_mem_container_maj_h = &labels_mem_container_maj_h[..];
 
 		//println!("Starting reporting for container: {shared_labels:?}");
 
@@ -141,7 +165,36 @@ pub fn launch_stats_task(
 			.with_description("Last time this container was seen by ContainerSpy")
 			.build();
 
-		// memory stats go here
+		// annoyingly a lot of the meter names cadvisor went with don't have units attached even though they have known units
+		let meter_container_memory_cache = meter
+			.u64_gauge("container_memory_cache")
+			//.with_unit("By")
+			.with_description("Total page cache memory")
+			.build();
+		let meter_container_memory_failures_total = meter
+			.u64_counter("container_memory_failures_total")
+			.with_description("Cumulative count of memory allocation failures")
+			.build();
+		let meter_container_memory_mapped_file = meter
+			.u64_gauge("container_memory_mapped_file")
+			//.with_unit("By")
+			.with_description("Size of memory mapped files")
+			.build();
+		let meter_container_memory_rss = meter
+			.u64_gauge("container_memory_rss")
+			//.with_unit("By")
+			.with_description("Size of RSS")
+			.build();
+		let meter_container_memory_usage_bytes = meter
+			.u64_gauge("container_memory_usage_bytes")
+			.with_unit("By")
+			.with_description("Current memory usage, including all memory regardless of when it was accessed")
+			.build();
+		let meter_container_memory_working_set_bytes = meter
+			.u64_gauge("container_memory_working_set_bytes")
+			.with_unit("By")
+			.with_description("Current working set")
+			.build();
 
 		let meter_container_network_receive_bytes_total = meter
 			.u64_counter("container_network_receive_bytes_total")
@@ -288,37 +341,54 @@ pub fn launch_stats_task(
 				// - https://github.com/google/cadvisor/blob/f6e31a3c/info/v1/container.go#L389 (yes, v1, roll w it)
 				// - https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html
 
+				// see https://stackoverflow.com/a/66778814 and also https://archive.is/qJWTp
+				// also see this comparison between cAdvisor output and {stats.memory_stats.usage:?} {v2stats:?}
+				// on my dev laptop: https://web.archive.org/web/20250408121954/https://pastebin.com/Kc4Ur0Hr
+				// and jackpot: https://github.com/google/cadvisor/blob/1f17a6c/container/libcontainer/handler.go#L808
+
 				if let Some(all_usage) = stats.memory_stats.usage {
 					if cfg!(windows) {
 						// todo
 						// i have no way to test cgroups v2 so only work on v1 - see readme for more info
 					} else if let Some(MemoryStatsStats::V2(v2stats)) = stats.memory_stats.stats {
-						// container_memory_cache
 
-						// container_memory_failcnt only on cgroups v1
+						// container_memory_cache
+						meter_container_memory_cache.record(v2stats.file, shared_labels);
 
 						// container_memory_failures_total
-						v2stats.pgfault; // label failure_type=pgfault
-						v2stats.pgmajfault; // label failure_type=pgmajfault
+						// need last
+						if let Some(MemoryStatsStats::V2(last_v2)) = last_mem_stats.stats {
+							meter_container_memory_failures_total.add(v2stats.pgfault - last_v2.pgfault, labels_mem_container_min_c);
+							meter_container_memory_failures_total.add(v2stats.pgfault - last_v2.pgfault, labels_mem_container_min_h);
+
+							meter_container_memory_failures_total.add(v2stats.pgmajfault - last_v2.pgmajfault, labels_mem_container_maj_c);
+							meter_container_memory_failures_total.add(v2stats.pgmajfault - last_v2.pgmajfault, labels_mem_container_maj_h);
+						}
+
+						// container_memory_kernel_usage
+						// actually not reported by cA but is reported by docker!
+						// not sure if slab contains kernel_stack or not though
+						// in my one sample, kernel_stack < slab
+						//v2stats.slab + v2stats.kernel_stack;
 
 						// container_memory_mapped_file
-						v2stats.file; // includes tmpfs
+						meter_container_memory_mapped_file.record(v2stats.file_mapped, shared_labels); // includes tmpfs
 
-						// container_memory_max_usage_bytes only on cgroups v1
-
-						// container_memory_migrate
-
-						// container_memory_numa_pages omitted cause its hard :<
-
-						// container_memory_rss: may need recalcing
+						// container_memory_rss
+						meter_container_memory_rss.record(v2stats.anon, shared_labels);
 
 						// container_memory_swap: can't get
+						// need accesss to memory.swap.*, but we only have memory.stat :(
 
-						// container_memory_usage_bytes: how?
+						// container_memory_usage_bytes
+						meter_container_memory_usage_bytes.record(all_usage, shared_labels);
 
-						// container_memory_working_set_bytes: not reported
+						// container_memory_working_set_bytes
+						meter_container_memory_working_set_bytes.record(all_usage - v2stats.inactive_file, shared_labels);
 					}
 				}
+
+				last_mem_stats = stats.memory_stats;
 
 				// networking
 				// TODO: what is stats.network? is it populated on windows?
