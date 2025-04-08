@@ -1,13 +1,11 @@
-use std::borrow::Cow;
-use std::collections::HashMap;
-use bollard::container::{BlkioStatsEntry, MemoryStatsStats, MemoryStatsStatsV1, Stats, StatsOptions};
+use bollard::container::{BlkioStatsEntry, MemoryStatsStats, Stats, StatsOptions};
 use bollard::models::ContainerSummary;
 use bollard::Docker;
 use opentelemetry::metrics::MeterProvider;
 use opentelemetry::KeyValue;
 use opentelemetry_sdk::metrics::SdkMeterProvider;
 use std::mem::MaybeUninit;
-use std::sync::{Arc, LazyLock, RwLock};
+use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::task::JoinHandle;
 use tokio_stream::StreamExt;
@@ -51,17 +49,22 @@ pub fn launch_stats_task(
 				Some(Ok(st)) => {
 					first_read = MaybeUninit::new(st);
 					break;
-				},
+				}
 				Some(Err(err)) => {
 					// TODO: use json logging or syslog so loki can understand this lol
 					println!("Failed to get stats for container {container_id}!: {err:?}");
-				},
+				}
 			}
 		}
 
 		// I'm going to rust jail!
 		let first_read = unsafe { first_read.assume_init() };
-		let Stats { blkio_stats, networks: mut last_net_stats, memory_stats: mut last_mem_stats, .. } = first_read;
+		let Stats {
+			blkio_stats,
+			networks: mut last_net_stats,
+			memory_stats: mut last_mem_stats,
+			..
+		} = first_read;
 
 		let mut last_io_stats = blkio_stats.io_service_bytes_recursive;
 
@@ -189,7 +192,9 @@ pub fn launch_stats_task(
 		let meter_container_memory_usage_bytes = meter
 			.u64_gauge("container_memory_usage_bytes")
 			.with_unit("By")
-			.with_description("Current memory usage, including all memory regardless of when it was accessed")
+			.with_description(
+				"Current memory usage, including all memory regardless of when it was accessed",
+			)
 			.build();
 		let meter_container_memory_working_set_bytes = meter
 			.u64_gauge("container_memory_working_set_bytes")
@@ -233,7 +238,7 @@ pub fn launch_stats_task(
 		let meter_container_network_transmit_packets_total = meter
 			.u64_counter("container_network_transmit_packets_total")
 			.with_description("Cumulative count of packets transmitted")
-			.build();;
+			.build();
 
 		let meter_container_start_time_seconds = meter
 			.u64_gauge("container_start_time_seconds")
@@ -352,18 +357,29 @@ pub fn launch_stats_task(
 						// todo
 						// i have no way to test cgroups v2 so only work on v1 - see readme for more info
 					} else if let Some(MemoryStatsStats::V2(v2stats)) = stats.memory_stats.stats {
-
 						// container_memory_cache
 						meter_container_memory_cache.record(v2stats.file, shared_labels);
 
 						// container_memory_failures_total
 						// need last
 						if let Some(MemoryStatsStats::V2(last_v2)) = last_mem_stats.stats {
-							meter_container_memory_failures_total.add(v2stats.pgfault - last_v2.pgfault, labels_mem_container_min_c);
-							meter_container_memory_failures_total.add(v2stats.pgfault - last_v2.pgfault, labels_mem_container_min_h);
+							meter_container_memory_failures_total.add(
+								v2stats.pgfault - last_v2.pgfault,
+								labels_mem_container_min_c,
+							);
+							meter_container_memory_failures_total.add(
+								v2stats.pgfault - last_v2.pgfault,
+								labels_mem_container_min_h,
+							);
 
-							meter_container_memory_failures_total.add(v2stats.pgmajfault - last_v2.pgmajfault, labels_mem_container_maj_c);
-							meter_container_memory_failures_total.add(v2stats.pgmajfault - last_v2.pgmajfault, labels_mem_container_maj_h);
+							meter_container_memory_failures_total.add(
+								v2stats.pgmajfault - last_v2.pgmajfault,
+								labels_mem_container_maj_c,
+							);
+							meter_container_memory_failures_total.add(
+								v2stats.pgmajfault - last_v2.pgmajfault,
+								labels_mem_container_maj_h,
+							);
 						}
 
 						// container_memory_kernel_usage
@@ -385,7 +401,8 @@ pub fn launch_stats_task(
 						meter_container_memory_usage_bytes.record(all_usage, shared_labels);
 
 						// container_memory_working_set_bytes
-						meter_container_memory_working_set_bytes.record(all_usage - v2stats.inactive_file, shared_labels);
+						meter_container_memory_working_set_bytes
+							.record(all_usage - v2stats.inactive_file, shared_labels);
 					}
 				}
 
@@ -404,39 +421,31 @@ pub fn launch_stats_task(
 								net_labels.push(KeyValue::new("interface", interface.clone()));
 								let net_labels = &net_labels.into_boxed_slice()[..];
 
-								meter_container_network_receive_bytes_total.add(
-									this_inter.rx_bytes - last_this_inter.rx_bytes,
-									net_labels
-								);
-								meter_container_network_transmit_bytes_total.add(
-									this_inter.tx_bytes - last_this_inter.tx_bytes,
-									net_labels
-								);
+								meter_container_network_receive_bytes_total
+									.add(this_inter.rx_bytes - last_this_inter.rx_bytes, net_labels);
+								meter_container_network_transmit_bytes_total
+									.add(this_inter.tx_bytes - last_this_inter.tx_bytes, net_labels);
 								#[cfg(not(windows))]
-								meter_container_network_receive_errors_total.add(
-									this_inter.rx_errors - last_this_inter.rx_errors,
-									net_labels
-								);
+								meter_container_network_receive_errors_total
+									.add(this_inter.rx_errors - last_this_inter.rx_errors, net_labels);
 								#[cfg(not(windows))]
-								meter_container_network_transmit_errors_total.add(
-									this_inter.tx_errors - last_this_inter.tx_errors,
-									net_labels
-								);
+								meter_container_network_transmit_errors_total
+									.add(this_inter.tx_errors - last_this_inter.tx_errors, net_labels);
 								meter_container_network_receive_packets_dropped_total.add(
 									this_inter.rx_dropped - last_this_inter.rx_dropped,
-									net_labels
+									net_labels,
 								);
 								meter_container_network_transmit_packets_dropped_total.add(
 									this_inter.tx_dropped - last_this_inter.tx_dropped,
-									net_labels
+									net_labels,
 								);
 								meter_container_network_receive_packets_total.add(
 									this_inter.rx_packets - last_this_inter.rx_packets,
-									net_labels
+									net_labels,
 								);
 								meter_container_network_transmit_packets_total.add(
 									this_inter.tx_packets - last_this_inter.tx_packets,
-									net_labels
+									net_labels,
 								);
 							}
 						}
@@ -493,7 +502,6 @@ fn get_rw_totals<'a>(iter: impl IntoIterator<Item = &'a BlkioStatsEntry>) -> (u6
 
 	(read, write)
 }
-
 
 // LMAO i built this entire string pool around the idea of needing &'static str but turns out i can just use owned strings
 // guuuh okay whatever that's fine i guess, i'll keep this around just in case i need it -- sink

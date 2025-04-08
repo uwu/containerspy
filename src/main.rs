@@ -1,16 +1,21 @@
-use std::{collections::BTreeMap, sync::Arc, time::Duration};
-
 use anyhow::Result;
 use bollard::Docker;
 use config::CONFIG;
 use opentelemetry_otlp::{MetricExporter, Protocol, WithExportConfig};
 use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
+use std::env::args;
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 use tokio::task::JoinHandle;
 use tokio::time::MissedTickBehavior;
 use tokio_util::sync::CancellationToken;
 
 mod config;
 mod stats_task;
+
+// includes data from Cargo.toml and other sources using the `built` crate
+pub mod built_info {
+	include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
 
 fn setup_otlp() -> Result<SdkMeterProvider> {
 	let metric_exporter = match CONFIG.otlp_protocol {
@@ -59,6 +64,28 @@ fn setup_otlp() -> Result<SdkMeterProvider> {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
+	// handle CLI stuff
+	for arg in args() {
+		if ["--version", "--help"].contains(&arg.as_str()) {
+			println!(
+				"ContainerSpy v{}, made with love by {}",
+				built_info::PKG_VERSION,
+				built_info::PKG_AUTHORS.replace(":", ", ")
+			);
+
+			if arg == "--help" {
+				println!(
+					"\n{}",
+					include_str!("help.txt")
+						.trim_end()
+						.replace("{{REPO_URL}}", built_info::PKG_REPOSITORY)
+				);
+			}
+
+			return Ok(());
+		}
+	}
+
 	// open a docker connection
 	let docker = Arc::new(if let Some(path) = &CONFIG.docker_socket {
 		Docker::connect_with_socket(path, 60, bollard::API_DEFAULT_VERSION)?
@@ -80,7 +107,8 @@ async fn main() -> Result<()> {
 		st2.cancel();
 	});
 
-	let mut container_search_interval = tokio::time::interval(Duration::from_millis(CONFIG.otlp_export_interval.unwrap_or(6000)) / 2);
+	let mut container_search_interval =
+		tokio::time::interval(Duration::from_millis(CONFIG.otlp_export_interval.unwrap_or(6000)) / 2);
 	container_search_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
 	let mut tasks: BTreeMap<String, JoinHandle<()>> = BTreeMap::new();

@@ -1,0 +1,9 @@
+Available config options (please see {{REPO_URL}} for more detailed config information):
+
+config file           env var              default
+
+N/A                   CSPY_CONFIG          /etc/containerspy/config.json
+docker_socket         CSPY_DOCKER_SOCKET   /var/run/docker.sock or //./pipe/docker_engine
+otlp_protocol         CSPY_OTLP_PROTO      httpbinary
+otlp_endpoint         CSPY_OTLP_ENDPOINT   localhost:4318 for HTTP, localhost:4317 for gRPC
+otlp_export_interval  CSPY_OTLP_INTERVAL   60 seconds

@@ -21,15 +21,13 @@ pub struct CspyConfig {
 
 pub static CONFIG: LazyLock<CspyConfig> = LazyLock::new(|| {
 	let cfg_loc = std::env::var("CSPY_CONFIG");
-	let cfg_loc = cfg_loc.as_deref().ok().unwrap_or("/etc/containerspy/config.json");
+	let cfg_loc = cfg_loc
+		.as_deref()
+		.ok()
+		.unwrap_or("/etc/containerspy/config.json");
 
-	CspyConfig::builder()
-		.env()
-		.file(cfg_loc)
-		.load()
-		.unwrap()
+	CspyConfig::builder().env().file(cfg_loc).load().unwrap()
 });
-
 
 /// deserialization boilerplate
 struct ProtoDeserVisitor;
@@ -43,13 +41,18 @@ impl confique::serde::de::Visitor<'_> for ProtoDeserVisitor {
 	}
 
 	fn visit_str<E>(self, v: &str) -> std::result::Result<Self::Value, E>
-		 where
-			  E: confique::serde::de::Error, {
-		 Ok(match v {
+	where
+		E: confique::serde::de::Error,
+	{
+		Ok(match v {
 			"httpbinary" => Protocol::HttpBinary,
 			"httpjson" => Protocol::HttpJson,
 			"grpc" => Protocol::Grpc,
-			&_ => return Err(E::custom(format!("{v} is not a valid OTLP protocol, valid options are httpbinary, httpjson, or grpc.")))
+			&_ => {
+				return Err(E::custom(format!(
+					"{v} is not a valid OTLP protocol, valid options are httpbinary, httpjson, or grpc."
+				)))
+			}
 		})
 	}
 }
