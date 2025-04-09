@@ -8,9 +8,11 @@ use std::{collections::BTreeMap, sync::Arc, time::Duration};
 use tokio::task::JoinHandle;
 use tokio::time::MissedTickBehavior;
 use tokio_util::sync::CancellationToken;
+use crate::s_log::*;
 
 mod config;
 mod stats_task;
+mod s_log;
 
 // includes data from Cargo.toml and other sources using the `built` crate
 pub mod built_info {
@@ -101,10 +103,11 @@ async fn main() -> Result<()> {
 	let st2 = shutdown_token.clone(); // to be moved into the task
 
 	tokio::spawn(async move {
-		tokio::signal::ctrl_c()
-			.await
-			.expect("Failed to setup ctrl-c handler");
-		st2.cancel();
+		if tokio::signal::ctrl_c().await.is_ok() {
+			st2.cancel();
+		} else {
+			warn("Failed to setup SIGINT handler, metrics may be dropped on exit", []);
+		}
 	});
 
 	let mut container_search_interval =
@@ -132,6 +135,7 @@ async fn main() -> Result<()> {
 				.binary_search_by(|c| c.id.as_ref().unwrap().cmp(cont))
 				.is_err()
 			{
+				debug(format_args!("Killing worker for {}", cont), [("container_id", &**cont)]);
 				handle.abort();
 				to_remove.push(cont.clone());
 			}
@@ -145,6 +149,7 @@ async fn main() -> Result<()> {
 		for cont in containers {
 			let id_string = cont.id.as_ref().unwrap();
 			if !tasks.contains_key(id_string) {
+				debug(format_args!("Launching worker for {}", id_string), [("container_id", &**id_string)]);
 				// all this string cloning hurts me
 				tasks.insert(
 					id_string.clone(),
@@ -159,7 +164,9 @@ async fn main() -> Result<()> {
 		task.abort();
 	}
 
-	println!("clean shutdown.");
+	debug("Exiting cleanly", []);
+	
+	let _ = meter_provider.force_flush();
 
 	Ok(())
 }

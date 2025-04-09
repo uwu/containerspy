@@ -217,6 +217,7 @@ dependencies = [
  "anyhow",
  "bollard",
  "built",
+ "chrono",
  "confique",
  "opentelemetry",
  "opentelemetry-otlp",

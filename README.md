@@ -140,7 +140,6 @@ ContainerSpy is now ready for deployment, but is WIP. The planned features are:
  - implement any metrics that should be available on Windows but aren't
  - automatically load configs from ./config.json too
  - (maybe?) add `--config` as another way to specify the location of the config file
- - use structured (json or syslog) logging to integrate nicely with log aggregation systems like Loki
  - (maybe?) read swap metrics if /sys is mounted (technically out of scope but might add anyway, not sure...)
 
 ## Supported metrics

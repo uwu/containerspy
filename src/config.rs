@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 use anyhow::Result;
 use confique::Config;
 use opentelemetry_otlp::Protocol;
+use crate::s_log::*;
 
 #[derive(Config)]
 pub struct CspyConfig {
@@ -26,7 +27,16 @@ pub static CONFIG: LazyLock<CspyConfig> = LazyLock::new(|| {
 		.ok()
 		.unwrap_or("/etc/containerspy/config.json");
 
-	CspyConfig::builder().env().file(cfg_loc).load().unwrap()
+	let cfg = CspyConfig::builder().env().file(cfg_loc).load().unwrap();
+
+	info("Loaded config at startup", [
+		("docker_socket", &*format!("{:?}", cfg.docker_socket)),
+		("otlp_protocol", &*format!("{:?}", cfg.otlp_protocol)),
+		("otlp_endpoint", &*format!("{:?}", cfg.otlp_endpoint)),
+		("otlp_export_interval", &*format!("{:?}", cfg.otlp_export_interval)),
+	]);
+	
+	cfg
 });
 
 /// deserialization boilerplate

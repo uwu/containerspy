@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::task::JoinHandle;
 use tokio_stream::StreamExt;
+use crate::s_log::*;
 
 // I do not enjoy taking a bunch of Rcs but tokio needs ownership so fine.
 pub fn launch_stats_task(
@@ -51,8 +52,7 @@ pub fn launch_stats_task(
 					break;
 				}
 				Some(Err(err)) => {
-					// TODO: use json logging or syslog so loki can understand this lol
-					println!("Failed to get stats for container {container_id}!: {err:?}");
+					error(format_args!("Failed to get stats for container {container_id}!: {err:?}"), [("container_id", &*container_id)]);
 				}
 			}
 		}
@@ -468,11 +468,7 @@ pub fn launch_stats_task(
 				}
 			} else {
 				// failed to get stats, log as such:
-				// TODO: use json logging or syslog so loki can understand this lol
-				println!(
-					"Failed to get stats for container {container_id}!: {:?}",
-					val.unwrap_err()
-				);
+				error(format_args!("Failed to get stats for container {container_id}!: {:?}", val.unwrap_err()), [("container_id", &*container_id)]);
 			}
 		}
 	})
@@ -502,31 +498,3 @@ fn get_rw_totals<'a>(iter: impl IntoIterator<Item = &'a BlkioStatsEntry>) -> (u6
 
 	(read, write)
 }
-
-// LMAO i built this entire string pool around the idea of needing &'static str but turns out i can just use owned strings
-// guuuh okay whatever that's fine i guess, i'll keep this around just in case i need it -- sink
-
-/*
-// labels have to have 'static values so i have to make a string pool or i'll leak ram, eugh
-// technically this does mean each possible kv combo is never dropped, but we only have one copy in ram at all times
-// Arc would also work, but that would require a lot of refcounting for a count we know will NEVER hit zero
-// so just use a Cow that borrows a leaked box instead.
-// I checked, OtelString can either be owned (from String), borrowed (from Cow<'static, str>), or refcounted (Arc<str>).
-
-static LABEL_POOL: LazyLock<RwLock<HashMap<(Cow<str>, Cow<str>), KeyValue>>> = LazyLock::new(|| RwLock::new(HashMap::new()));
-fn pool_kv(key: &str, val: &str) -> KeyValue {
-	let leaked_k = &*Box::leak(key.to_string().into_boxed_str());
-	let leaked_v = &*Box::leak(val.to_string().into_boxed_str());
-
-	let cows = (Cow::from(leaked_k), Cow::from(leaked_v));
-
-	if let Some(kv) = LABEL_POOL.read().unwrap().get(&cows) {
-		// this should borrow the same value thanks to OtelString::Borrowed :)
-		kv.clone()
-	} else {
-		// we know upfront that the cow is borrowed, so just clone it
-		let kv = KeyValue::new(cows.0.clone(), cows.1.clone());
-		LABEL_POOL.write().unwrap().insert(cows, kv.clone());
-		kv
-	}
-}*/

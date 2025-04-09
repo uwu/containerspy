@@ -28,3 +28,4 @@ COPY --from=build-env /build/target/release/containerspy /usr/bin/containerspy
 RUN mkdir /etc/containerspy
 
 ENTRYPOINT ["containerspy"]
+STOPSIGNAL SIGINT
