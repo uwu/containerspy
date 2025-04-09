@@ -4,7 +4,7 @@ WORKDIR /build
 
 # the rust container is literally incomplete lol
 # https://stackoverflow.com/a/74309414
-RUN apk add --no-cache pcc-libs-dev musl-dev pkgconf
+RUN apk add --no-cache musl-dev
 
 # for layer caching, first only build the deps, so that changes to literally anything else don't invalidate the cache
 RUN mkdir src
