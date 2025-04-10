@@ -9,6 +9,15 @@ or a cloud observability platform.
 Note that containerspy currently targets only Docker, not Kubernetes or any other orchestration systems.
 It outputs the same traces as cAdvisor for drop-in compatibility with existing data series and dashboards.
 
+README CONTENTS:
+ - [Why make/use this](#why-makeuse-this)
+ - [Install Instructions](#install-instructions)
+ - [How to Configure](#how-to-configure)
+ - [Exporting to Prometheus](#exporting-to-prometheus)
+ - [Exporting to Grafana Alloy](#exporting-to-grafana-alloy)
+ - [TODO](#todo)
+ - [Supported Metrics](#supported-metrics)
+
 ## Why make/use this?
 
 ContainerSpy is intended to replace [cAdvisor](https://github.com/google/cadvisor) in a Prometheus/Grafana monitoring
@@ -36,7 +45,7 @@ configurable email alerting OOTB with very little setup. It is a great piece of 
 
 My motivation to move to a Prometheus/Grafana setup is that I want the centralised rich logging that Loki can give me.
 
-## Setup Instructions
+## Install Instructions
 
 See the following section for detailed instructions on configuring containerspy.
 
@@ -132,6 +141,109 @@ the chosen protocol (`http://localhost:4318` for HTTP, `http://localhost:4317` f
 
 Note: to send directly to Prometheus (with `--enable-feature=otlp-write-receiver`), use
 http://localhost:9090/api/v1/otlp/v1/metrics as your endpoint, swapping `localhost:9090` for your Prometheus `host:port`.
+
+## Exporting to [Prometheus](https://prometheus.io/)
+
+First, enable Prometheus' OTLP write receiver by starting it with the `--enable-feature=otlp-write-receiver` flag.
+If you are using docker compose, you would add this like so:
+
+```yml
+prometheus:
+	image: prom/promtheus
+	# ...
+	command: --enable-feature=otlp-write-receiver
+```
+
+Then find the host for your instance, this is likely to be `localhost:9090`, or for a containerised setup,
+the name of your container, eg `prometheus:9090`, and configure the ContainerSpy OTLP endpoint with this host, as
+`http://host/api/v1/otlp/v1/metrics`.
+
+A full example compose file for containerspy and prometheus is:
+
+```yml
+services:
+	containerspy:
+		image: ghcr.io/uwu/containerspy
+		volumes:
+			- /var/run/docker.sock:/var/run/docker.sock:ro
+		environment:
+			CSPY_OTLP_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
+		networks: [otlpnet]
+
+	prometheus:
+		image: prom/prometheus
+		volumes:
+			- ./prometheus:/prometheus
+		# ports not necessary for cspy to send metrics in this example,
+		# but necessary for you to access the prom dashboard
+		ports: ['9090:9090']
+		command: --enable-feature=otlp-write-
+		networks: [otlpnet]
+
+networks:
+	otlpnet:
+```
+
+## Exporting to [Grafana Alloy](https://grafana.com/docs/alloy/latest/)
+
+Sending your metrics to Alloy allows you to perform extra filtering and processing, and centralise your collection.
+
+In your config.alloy file, if you don't already have an `otelcol.receiver.otlp` block setup, create one:
+
+You can use either http or grpc. I will use grpc here but http works just fine, both binary and json.
+
+```
+otelcol.receiver.otlp "container_metrics" {
+	grpc {
+	}
+
+	output {
+		metrics = []
+	}
+}
+```
+
+Now route containerspy's output to this: assuming for simplicity that alloy is running on localhost,
+just `otlp_protocol: "grpc"` will do it, but if its somewhere else, you'll need that and
+`otlp_endpoint: "http://alloy-host:4317"`, or whatever it happens to be.
+Naturally if you're using HTTP then use the appropriate settings
+(default protocol and endpoint is port 4318, and with HTTP on localhost literally no config is needed!
+It will pick it up 100% automatically in that case.)
+
+Then you can place the name of another node in the metrics array to do whatever processing you may want on the metrics.
+For example, you could add an `otelcol.processor.batch` node and set
+`metrics = [otelcol.processor.batch.container_metrics.input]` to group metrics into larger batches before submitting
+to the next nodes for better compression and performance (if you are using cspy at much larger scales and delayed
+metrics are acceptable this could be useful).
+
+You could also use an `otelcol.processor.filter` block to apply OTTL (OpenTelemetry Transformation Language) statements.
+
+Or for a simple setup you could just route it into an instance of Prometheus, Mimir, Splunk, Kafka, S3, DataDog, or
+even back out as OTLP to pass to another node, whatever you need!:
+
+```
+// receive metrics from containerspy
+otelcol.receiver.otlp "container_metrics" {
+	grpc {
+	}
+
+	output {
+		metrics = [otelcol.exporter.prometheus.container_metrics.input]
+	}
+}
+
+// convert the metrics from OTLP format to Prometheus format (any exporter of your choosing will work, naturally)
+otelcol.exporter.prometheus "container_metrics" {
+	forward_to = [prometheus.remote_write.default.receiver]
+}
+
+// send converted metrics to the Prometheus server, be it a self-hosted Prometheus, Mimir, Grafana Cloud, etc.
+prometheus.remote_write "default" {
+	endpoint {
+		url = "http://..."
+	}
+}
+```
 
 ## TODO
 
