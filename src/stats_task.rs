@@ -1,9 +1,8 @@
 use bollard::container::{BlkioStatsEntry, MemoryStatsStats, Stats, StatsOptions};
 use bollard::models::ContainerSummary;
 use bollard::Docker;
-use opentelemetry::metrics::MeterProvider;
-use opentelemetry::{InstrumentationScope, KeyValue};
-use opentelemetry_sdk::metrics::SdkMeterProvider;
+use opentelemetry::metrics::Meter;
+use opentelemetry::KeyValue;
 use std::mem::MaybeUninit;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -15,7 +14,7 @@ use crate::s_log::*;
 pub fn launch_stats_task(
 	container: ContainerSummary,
 	docker: Arc<Docker>,
-	meter_provider: Arc<SdkMeterProvider>,
+	meter: Arc<Meter>
 ) -> JoinHandle<()> {
 	tokio::spawn(async move {
 		// extract some container info
@@ -26,8 +25,6 @@ pub fn launch_stats_task(
 			.flatten()
 			.next()
 			.map(|n| n.trim_start_matches("/").to_owned());
-
-		let meter_name = "cspy_".to_string() + container_id.as_str();
 
 		let mut stats_stream = docker.stats(
 			container_id.as_str(),
@@ -118,8 +115,6 @@ pub fn launch_stats_task(
 		//println!("Starting reporting for container: {shared_labels:?}");
 
 		// create meters
-		let meter = meter_provider.meter_with_scope(InstrumentationScope::builder(meter_name).build());
-
 		let meter_container_cpu_usage_seconds_total = meter
 			.f64_counter("container_cpu_usage_seconds_total")
 			.with_unit("s")

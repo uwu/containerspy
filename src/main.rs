@@ -5,6 +5,7 @@ use opentelemetry_otlp::{MetricExporter, Protocol, WithExportConfig};
 use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
 use std::env::args;
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
+use opentelemetry::metrics::MeterProvider;
 use tokio::task::JoinHandle;
 use tokio::time::MissedTickBehavior;
 use tokio_util::sync::CancellationToken;
@@ -97,6 +98,7 @@ async fn main() -> Result<()> {
 
 	// connect the OTLP exporter
 	let meter_provider = Arc::new(setup_otlp()?);
+	let meter = Arc::new(meter_provider.meter("cspy_worker"));
 
 	// fetch-report loop with graceful shutdown
 	let shutdown_token = CancellationToken::new();
@@ -153,7 +155,7 @@ async fn main() -> Result<()> {
 				// all this string cloning hurts me
 				tasks.insert(
 					id_string.clone(),
-					stats_task::launch_stats_task(cont, docker.clone(), meter_provider.clone()),
+					stats_task::launch_stats_task(cont, docker.clone(), meter.clone()),
 				);
 			}
 		}
@@ -165,7 +167,7 @@ async fn main() -> Result<()> {
 	}
 
 	debug("Exiting cleanly", []);
-	
+
 	let _ = meter_provider.force_flush();
 
 	Ok(())
