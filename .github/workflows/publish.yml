@@ -11,12 +11,7 @@ on:
 jobs:
    publish:
       name: Publish Docker Image to ghcr.io
-      runs-on: ${{ matrix.runner }}
-      strategy:
-         fail-fast: false
-         matrix:
-            runner: [ubuntu-24.04, ubuntu-24.04-arm]
-            
+      runs-on: ubuntu-latest
       permissions:
          packages: write
 
@@ -29,12 +24,6 @@ jobs:
                # docker/build-push-action supports comma separated tags
                DOCKER_IMAGE_TAG_BASE="ghcr.io/${{ github.repository }}"
                DOCKER_IMAGE_TAGS="$DOCKER_IMAGE_TAG_BASE:dev"
-
-               if [[ "${{ matrix.runner }}" == *-arm ]]; then
-                  echo "DOCKER_PLATFORM=linux/arm64" >> $GITHUB_ENV
-               else
-                  echo "DOCKER_PLATFORM=linux/amd64" >> $GITHUB_ENV
-               fi
 
                # if this is a versioned release, github.ref will start with 'refs/tags/v'
                GH_REF="${{ github.ref }}"
@@ -74,6 +63,6 @@ jobs:
                file: ./Dockerfile
                push: true
                tags: ${{ env.DOCKER_IMAGE_TAGS }}
-               platforms: ${{ env.DOCKER_PLATFORM }}
+               platforms: linux/amd64
                cache-from: type=gha
                cache-to: type=gha,mode=max
