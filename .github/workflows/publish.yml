@@ -15,7 +15,8 @@ jobs:
       strategy:
          fail-fast: false
          matrix:
-            platform: [linux/amd64, linux/arm64]
+            runner: [ubuntu-latest, macos-latest]
+            
       permissions:
          packages: write
 
@@ -23,11 +24,18 @@ jobs:
          -  name: Check out the repo
             uses: actions/checkout@v4
 
-         -  name: Setup version number
+         -  name: Setup variables
             run: |
                # docker/build-push-action supports comma separated tags
                DOCKER_IMAGE_TAG_BASE="ghcr.io/${{ github.repository }}"
                DOCKER_IMAGE_TAGS="$DOCKER_IMAGE_TAG_BASE:dev"
+
+               # use ubuntu-latest to build x86 and macos-latest to build aarch64
+               if [[ "${{ matrix.runner }}" == macos-latest ]]; then
+                  echo "DOCKER_PLATFORM=linux/arm64" >> $GITHUB_ENV
+               else
+                  echo "DOCKER_PLATFORM=linux/amd64" >> $GITHUB_ENV
+               fi
 
                # if this is a versioned release, github.ref will start with 'refs/tags/v'
                GH_REF="${{ github.ref }}"
@@ -38,9 +46,13 @@ jobs:
                fi
 
                echo "DOCKER_IMAGE_TAGS=\"$DOCKER_IMAGE_TAGS\"" >> $GITHUB_ENV
+               # this is dumb
+               echo "VERSION=$VERSION" >> $GITHUB_ENV
 
          -  name: Check if version already exists in registry
             run: |
+               # this is still dumb
+               VERSION=${{ env.VERSION }}
                if docker manifest inspect ghcr.io/${{ github.repository }}:$VERSION > /dev/null 2>&1; then
                  echo "Image with version $VERSION already exists in registry"
                  exit 1
@@ -63,6 +75,6 @@ jobs:
                file: ./Dockerfile
                push: true
                tags: ${{ env.DOCKER_IMAGE_TAGS }}
-               platforms: ${{ matrix.platform }}
+               platforms: ${{ env.DOCKER_PLATFORM }}
                cache-from: type=gha
                cache-to: type=gha,mode=max
