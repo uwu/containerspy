@@ -203,9 +203,9 @@ otelcol.receiver.otlp "container_metrics" {
 Now route containerspy's output to this: assuming for simplicity that alloy is running on localhost,
 just `otlp_protocol: "grpc"` will do it, but if its somewhere else, you'll need that and
 `otlp_endpoint: "http://alloy-host:4317"`, or whatever it happens to be.
+
 Naturally if you're using HTTP then use the appropriate settings
-(default protocol and endpoint is port 4318, and with HTTP on localhost literally no config is needed!
-It will pick it up 100% automatically in that case.)
+(default protocol and endpoint is `http://host:4318/v1/metrics`)
 
 Then you can place the name of another node in the metrics array to do whatever processing you may want on the metrics.
 For example, you could add an `otelcol.processor.batch` node and set
