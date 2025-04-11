@@ -11,7 +11,7 @@ on:
 jobs:
    publish:
       name: Publish Docker Image to ghcr.io
-      runs-on: ubuntu-latest
+      runs-on: ${{ matrix.runner }}
       strategy:
          fail-fast: false
          matrix:
