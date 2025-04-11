@@ -15,7 +15,7 @@ jobs:
       strategy:
          fail-fast: false
          matrix:
-            runner: [ubuntu-latest, macos-latest]
+            runner: [ubuntu-24.04, ubuntu-24.04-arm]
             
       permissions:
          packages: write
@@ -30,8 +30,7 @@ jobs:
                DOCKER_IMAGE_TAG_BASE="ghcr.io/${{ github.repository }}"
                DOCKER_IMAGE_TAGS="$DOCKER_IMAGE_TAG_BASE:dev"
 
-               # use ubuntu-latest to build x86 and macos-latest to build aarch64
-               if [[ "${{ matrix.runner }}" == macos-latest ]]; then
+               if [[ "${{ matrix.runner }}" == *-arm ]]; then
                   echo "DOCKER_PLATFORM=linux/arm64" >> $GITHUB_ENV
                else
                   echo "DOCKER_PLATFORM=linux/amd64" >> $GITHUB_ENV
