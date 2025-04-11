@@ -139,9 +139,6 @@ the chosen protocol (`http://localhost:4318` for HTTP, `http://localhost:4317` f
 [here](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md) and
 [here](https://github.com/open-telemetry/opentelemetry-rust/blob/bc82d4f6/opentelemetry-otlp/src/exporter/mod.rs#L60)).
 
-Note: to send directly to Prometheus (with `--enable-feature=otlp-write-receiver`), use
-http://localhost:9090/api/v1/otlp/v1/metrics as your endpoint, swapping `localhost:9090` for your Prometheus `host:port`.
-
 ## Exporting to [Prometheus](https://prometheus.io/)
 
 First, enable Prometheus' OTLP write receiver by starting it with the `--enable-feature=otlp-write-receiver` flag.

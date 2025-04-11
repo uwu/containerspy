@@ -2,7 +2,7 @@ use bollard::container::{BlkioStatsEntry, MemoryStatsStats, Stats, StatsOptions}
 use bollard::models::ContainerSummary;
 use bollard::Docker;
 use opentelemetry::metrics::MeterProvider;
-use opentelemetry::KeyValue;
+use opentelemetry::{InstrumentationScope, KeyValue};
 use opentelemetry_sdk::metrics::SdkMeterProvider;
 use std::mem::MaybeUninit;
 use std::sync::Arc;
@@ -28,9 +28,6 @@ pub fn launch_stats_task(
 			.map(|n| n.trim_start_matches("/").to_owned());
 
 		let meter_name = "cspy_".to_string() + container_id.as_str();
-		// lol 'static moment
-		// TODO: this is acceptable for specifically the use case of the michiru deployment, but not more generally at all
-		let meter_name = &*Box::leak(meter_name.into_boxed_str());
 
 		let mut stats_stream = docker.stats(
 			container_id.as_str(),
@@ -121,7 +118,7 @@ pub fn launch_stats_task(
 		//println!("Starting reporting for container: {shared_labels:?}");
 
 		// create meters
-		let meter = meter_provider.meter(meter_name);
+		let meter = meter_provider.meter_with_scope(InstrumentationScope::builder(meter_name).build());
 
 		let meter_container_cpu_usage_seconds_total = meter
 			.f64_counter("container_cpu_usage_seconds_total")
