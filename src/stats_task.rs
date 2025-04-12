@@ -35,24 +35,18 @@ pub fn launch_stats_task(
 		);
 
 		// use the first read only for stats diffing for blkio - don't need for cpu thanks to precpu.
-		#[allow(unused_assignments)]
-		let mut first_read = MaybeUninit::uninit();
-
-		loop {
+		let first_read = loop {
 			match stats_stream.next().await {
 				None => return,
 				Some(Ok(st)) => {
-					first_read = MaybeUninit::new(st);
-					break;
+					break st;
 				}
 				Some(Err(err)) => {
 					error(format_args!("Failed to get stats for container {container_id}!: {err:?}"), [("container_id", &*container_id)]);
 				}
 			}
-		}
+		};
 
-		// I'm going to rust jail!
-		let first_read = unsafe { first_read.assume_init() };
 		let Stats {
 			blkio_stats,
 			networks: mut last_net_stats,
