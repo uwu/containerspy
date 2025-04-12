@@ -66,7 +66,7 @@ fn log_impl<'a>(level: LogLevel, msg: &str, rich: impl IntoIterator<Item = (&'a 
 	// Combine the two rich element iterators
 	let all_rich_elements = iter.chain(arg_iter);
 
-	let mut buf = format!("{nice_time}");
+	let mut buf = nice_time;
 	for (k, v) in all_rich_elements {
 		if needs_escaping(&k) {
 			continue;
