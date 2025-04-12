@@ -1,31 +1,28 @@
-FROM rust:1.86-alpine3.21 AS build-env
-
+# muslrust applications don't link against libc, they contain musl, NEAT!
+FROM clux/muslrust:stable AS chef
+USER root
+RUN cargo install cargo-chef
 WORKDIR /build
 
-# the rust container is literally incomplete lol
-# https://stackoverflow.com/a/74309414
-RUN apk add --no-cache musl-dev
+# use chef to plan the most efficent way to build the project from our files
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-# for layer caching, first only build the deps, so that changes to literally anything else don't invalidate the cache
-RUN mkdir src
-RUN echo 'fn main() {}' > src/main.rs
-COPY Cargo.toml Cargo.lock ./
-RUN cargo build --release
+# use chef to build the deps
+FROM chef AS builder
+COPY --from=planner /build/recipe.json recipe.json
 
-# copy in the real source
-RUN rm src/*.rs
-COPY src src
-COPY build.rs ./
+# build deps (cached by docker)
+RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
 
-# this builds a release binary
-RUN cargo build --release
+# build the application
+COPY . .
+RUN cargo build --release --target x86_64-unknown-linux-musl
 
-FROM alpine:3.21
+FROM gcr.io/distroless/static
 
-COPY --from=build-env /build/target/release/containerspy /usr/bin/containerspy
-
-# for mounting config.json into
-RUN mkdir /etc/containerspy
+COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/containerspy /usr/bin/containerspy
 
 ENTRYPOINT ["containerspy"]
 STOPSIGNAL SIGINT
