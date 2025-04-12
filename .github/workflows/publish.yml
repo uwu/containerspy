@@ -49,8 +49,10 @@ jobs:
             include:
                -  arch: arm64
                   os: ubuntu-24.04-arm
+                  rust-target: aarch64
                -  arch: amd64
                   os: ubuntu-24.04
+                  rust-target: x86_64
 
       runs-on: ${{ matrix.os }}
       needs:
@@ -87,6 +89,8 @@ jobs:
                tags: ${{ steps.variables.outputs.DOCKER_IMAGE_TAG }}
                cache-from: type=gha
                cache-to: type=gha,mode=max
+               build-args: BUILD_PLATFORM=${{ matrix.rust-target }}
+
          -  name: Write digest
             run: |
                digest="${{ steps.upload-docker-image.outputs.digest }}"
