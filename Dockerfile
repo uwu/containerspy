@@ -28,7 +28,8 @@ RUN cargo build --release --target ${BUILD_PLATFORM}-unknown-linux-musl
 
 FROM gcr.io/distroless/static
 
-COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/containerspy /usr/bin/containerspy
+ARG BUILD_PLATFORM="x86_64"
+COPY --from=builder /build/target/${BUILD_PLATFORM}-unknown-linux-musl/release/containerspy /usr/bin/containerspy
 
 ENTRYPOINT ["containerspy"]
 STOPSIGNAL SIGINT
