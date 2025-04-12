@@ -3,7 +3,6 @@ use bollard::models::ContainerSummary;
 use bollard::Docker;
 use opentelemetry::metrics::Meter;
 use opentelemetry::KeyValue;
-use std::mem::MaybeUninit;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::task::JoinHandle;

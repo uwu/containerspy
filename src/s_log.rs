@@ -51,21 +51,24 @@ impl Display for LogLevel {
 
 fn log_impl<'a>(level: LogLevel, msg: &str, rich: impl IntoIterator<Item = (&'a str, &'a str)>) {
 	let time = Utc::now();
-	let nice_time = time.format("%F %X%.3f");
-	let full_time = time.format("%+");
+	let nice_time = time.format("%F %X%.3f").to_string();
+	let full_time = time.format("%+").to_string();
+	let level_str = level.to_string();
 
-	let mut final_rich = vec![
-		("ts", full_time.to_string()),
-		("level", level.to_string()),
-		("msg", msg.to_string())
+	let final_rich: Vec<(&str, &str)> = vec![
+		("ts", full_time.as_str()),
+		("level", level_str.as_str()),
+		("msg", msg)
 	];
-
-	// i don't care anymore, just clone it all temporarily.
-	final_rich.extend(rich.into_iter().map(|(a, b)| (a, b.to_string())));
+	// Use map to "forget" the lifetime of rich elements
+	let iter = final_rich.into_iter();
+	let arg_iter = rich.into_iter().map(|x|x);
+	// Combine the two rich element iterators
+	let all_rich_elements = iter.chain(arg_iter);
 
 	let mut buf = format!("{nice_time}");
-	for (k, v) in final_rich {
-		if needs_escaping(k) {
+	for (k, v) in all_rich_elements {
+		if needs_escaping(&k) {
 			continue;
 		}
 
