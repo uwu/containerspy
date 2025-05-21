@@ -250,6 +250,8 @@ ContainerSpy is now ready for deployment, but is WIP. The planned features are:
  - automatically load configs from ./config.json too
  - (maybe?) add `--config` as another way to specify the location of the config file
  - (maybe?) read swap metrics if /sys is mounted (technically out of scope but might add anyway, not sure...)
+ - add instance label to fix spikes
+ - send a zero for relevant data when container killed (?) - test first. 
 
 ## Supported metrics
 
